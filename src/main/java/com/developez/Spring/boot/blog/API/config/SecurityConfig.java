@@ -2,12 +2,14 @@ package com.developez.Spring.boot.blog.API.config;
 
 import com.developez.Spring.boot.blog.API.Security.JwtAuthenticationEntryPoint;
 import com.developez.Spring.boot.blog.API.Security.JwtAuthenticationFilter;
-import com.developez.Spring.boot.blog.API.filter.CsrfCookieFilter;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.security.SecuritySchemes;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,9 +19,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 
 import java.util.Arrays;
@@ -27,9 +26,23 @@ import java.util.List;
 
 @Configuration
 @EnableMethodSecurity
+@SecuritySchemes({
+        @SecurityScheme(
+                name = "Bear Authentication",
+                type = SecuritySchemeType.HTTP,
+                bearerFormat = "JWT",
+                scheme = "bearer"
+        ),
+        @SecurityScheme(
+                name = "csrfToken",  // Nome dello schema di sicurezza per CSRF
+                type = SecuritySchemeType.APIKEY,
+                paramName = "X-XSRF-TOKEN",  // Nome dell'header
+                in = SecuritySchemeIn.HEADER  // Posizione dell'header
+        )
+})
 public class SecurityConfig {
 
-    private UserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService;
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
@@ -37,7 +50,7 @@ public class SecurityConfig {
 
     SecurityConfig( UserDetailsService userDetailsService,
                     JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-                    JwtAuthenticationFilter jwtAuthenticationFilter){
+                    JwtAuthenticationFilter jwtAuthenticationFilter ) {
         this.userDetailsService = userDetailsService;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
@@ -49,17 +62,17 @@ public class SecurityConfig {
     }
 
     @Bean
-    public static PasswordEncoder passwordEncoder(){
-            return new BCryptPasswordEncoder();
+    public static PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     SecurityFilterChain securityFilterChain( HttpSecurity http ) throws Exception {
 
         // Crea un nuovo gestore di attributi di richiesta CSRF
-        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+//        CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         // Imposta il nome dell'attributo della richiesta CSRF a "_csrf"
-        requestHandler.setCsrfRequestAttributeName( "_csrf" );
+//        requestHandler.setCsrfRequestAttributeName( "_csrf" );
 
         http
                 // Configura CORS
@@ -71,8 +84,8 @@ public class SecurityConfig {
                             // "http://127.0.0.1:4200" che è l'indirizzo IP di localhost Angular
                             corsConfiguration.setAllowedOrigins( List.of( "http://127.0.0.1:4200/", "http://localhost:4200/" ) );
                             // Consente tutti i metodi HTTP
-                            corsConfiguration.setAllowedMethods( List.of("GET", "POST", "PUT", "DELETE", "HEAD",
-                                    "OPTIONS"));
+                            corsConfiguration.setAllowedMethods( List.of( "GET", "POST", "PUT", "DELETE", "HEAD",
+                                    "OPTIONS" ) );
                             // Consente tutti gli header
                             corsConfiguration.setAllowedHeaders( List.of( "*" ) );
                             // Consente le credenziali
@@ -83,27 +96,21 @@ public class SecurityConfig {
                             return corsConfiguration;
                         } )
                 )
-                .csrf( ( httpSecurityCsrfConfigurer ) -> httpSecurityCsrfConfigurer
-                        // Imposta il gestore di attributi di richiesta CSRF
-                        .csrfTokenRequestHandler( requestHandler )
-                        // Ignora la protezione CSRF per i percorsi "/contact" e "/register"
-                        .ignoringRequestMatchers( "/api/auth/login", "/api/auth/register", "/api/auth/signin", "/api/auth/signup" )
-                        // Utilizza un repository di token CSRF basato su cookie con l'opzione HttpOnly disabilitata
-                        .csrfTokenRepository( CookieCsrfTokenRepository.withHttpOnlyFalse() )
-                )
+                .csrf().disable()
                 // Aggiunge il filtro CSRF personalizzato dopo il filtro di autenticazione di base
-                .addFilterAfter(
-                        new CsrfCookieFilter(), UsernamePasswordAuthenticationFilter.class
-                )
-                .authorizeHttpRequests((authorize) -> {
-
-                    authorize.requestMatchers( HttpMethod.GET, "/api/**").permitAll()
+//                .addFilterAfter(
+//                        new CsrfCookieFilter(), UsernamePasswordAuthenticationFilter.class
+//                )
+                .authorizeHttpRequests( ( authorize ) ->
+                        authorize.requestMatchers( HttpMethod.GET, "/api/**" ).permitAll()
 //                            .requestMatchers( HttpMethod.GET, "/api/categories/**").permitAll()
-                            .requestMatchers( "/api/auth/**" ).permitAll()
-                            .anyRequest().authenticated();
-                }).exceptionHandling( exception -> exception
+                        .requestMatchers( "/api/auth/**" ).permitAll()
+                        // Accesso pubblico a Swagger
+                        .requestMatchers( "/swagger-ui/**" ).permitAll()
+                        .requestMatchers( "/v3/api-docs/**" ).permitAll()
+                        .anyRequest().authenticated() ).exceptionHandling( exception -> exception
                         .authenticationEntryPoint( jwtAuthenticationEntryPoint )
-                ).sessionManagement(session -> session
+                ).sessionManagement( session -> session
                         .sessionCreationPolicy( SessionCreationPolicy.STATELESS )
                 );
 

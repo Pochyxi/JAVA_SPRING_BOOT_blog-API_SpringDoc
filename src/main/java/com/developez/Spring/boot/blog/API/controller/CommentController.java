@@ -2,7 +2,11 @@ package com.developez.Spring.boot.blog.API.controller;
 
 import com.developez.Spring.boot.blog.API.payload.CommentDto;
 import com.developez.Spring.boot.blog.API.service.CommentService;
-import jakarta.persistence.Table;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -13,7 +17,9 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/")
-@Table(name = "comments")
+@Tag(
+        name = "CRUD REST APIs per Comment"
+)
 public class CommentController {
 
     private final CommentService commentService;
@@ -24,23 +30,75 @@ public class CommentController {
         this.commentService = commentService;
     }
 
+    @Operation(
+            summary = "Creazione di un Commento",
+            description = "Creazione di un Commento",
+            tags = { "CRUD REST APIs per Comment" }
+    )
+    @ApiResponse(
+            responseCode = "201",
+            description = "Commento creato con successo"
+    )
+    @SecurityRequirements({
+            @SecurityRequirement(
+                    name = "Bear Authentication"
+            ),
+            @SecurityRequirement(
+                    name = "csrfToken"
+            )
+    })
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<CommentDto> createComment( @PathVariable("postId") long postId,
                                                     @Valid @RequestBody CommentDto commentDto) {
         return new ResponseEntity<>(commentService.createComment(postId, commentDto), HttpStatus.CREATED);
     }
 
+    @Operation(
+            summary = "Recupero di tutti i Commenti",
+            description = "Recupero di tutti i Commenti",
+            tags = { "CRUD REST APIs per Comment" }
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Commenti recuperati con successo"
+    )
     @GetMapping("/posts/{postId}/comments")
     public ResponseEntity<List<CommentDto>> getCommentsByPostId( @PathVariable("postId") long postId ) {
         return new ResponseEntity<>(commentService.getCommentsByPostId(postId), HttpStatus.OK);
     }
 
+    @Operation(
+            summary = "Recupero di un Commento",
+            description = "Recupero di un Commento",
+            tags = { "CRUD REST APIs per Comment" }
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Commento recuperato con successo"
+    )
     @GetMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<CommentDto> getCommentById( @PathVariable("postId") long postId,
                                                       @PathVariable("commentId") long commentId ) {
         return new ResponseEntity<>(commentService.getCommentById(postId, commentId), HttpStatus.OK);
     }
 
+    @Operation(
+            summary = "Aggiornamento di un Commento",
+            description = "Aggiornamento di un Commento",
+            tags = { "CRUD REST APIs per Comment" }
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Commento aggiornato con successo"
+    )
+    @SecurityRequirements({
+            @SecurityRequirement(
+                    name = "Bear Authentication"
+            ),
+            @SecurityRequirement(
+                    name = "csrfToken"
+            )
+    })
     @PutMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<CommentDto> updateComment( @PathVariable("postId") long postId,
                                                      @PathVariable("commentId") long commentId,
@@ -48,6 +106,23 @@ public class CommentController {
         return new ResponseEntity<>(commentService.updateComment(postId, commentId, commentDto), HttpStatus.OK);
     }
 
+    @Operation(
+            summary = "Eliminazione di un Commento",
+            description = "Eliminazione di un Commento",
+            tags = { "CRUD REST APIs per Comment" }
+    )
+    @ApiResponse(
+            responseCode = "200",
+            description = "Commento eliminato con successo"
+    )
+    @SecurityRequirements({
+            @SecurityRequirement(
+                    name = "Bear Authentication"
+            ),
+            @SecurityRequirement(
+                    name = "csrfToken"
+            )
+    })
     @DeleteMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<String> deleteComment(@PathVariable(value = "postId") Long postId,
                                                 @PathVariable(value = "commentId") Long commentId) {
